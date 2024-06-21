@@ -1,58 +1,76 @@
 package com.example.demo;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
 
 public class Detection {
+
+    private static final Logger logger = LogManager.getLogger(Detection.class);
+
     static File[] oldListRoot = File.listRoots();
+    static boolean runDetection = true;
 
     public static void main(String[] args) {
-        waitForNotifying();
+        startDetectionThread();
     }
 
-    public static void waitForNotifying() {
-        Thread t = new Thread(new Runnable() {
-            public void run() {
-                while (true) {
-                    try {
-                        Thread.sleep(100);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                    if (File.listRoots().length > oldListRoot.length) {
-                        File drive = getLastDrivePath(File.listRoots(), oldListRoot);
-                        System.out.println("new drive detected");
-                        oldListRoot = File.listRoots();
-                        System.out.println("drive"+ drive +" detected");
-                        System.out.println(AppUtil.CreateFlatFileList(File.listRoots()[File.listRoots().length - 1]));
-                        System.out.println(AppUtil.CreateJsonList(File.listRoots()[File.listRoots().length - 1]));
-
-                    } else if (File.listRoots().length < oldListRoot.length) {
-                        System.out.println(oldListRoot[oldListRoot.length-1]+" drive removed");
-
-                        oldListRoot = File.listRoots();
-
-                    }
-
+    public static void startDetectionThread() {
+        Thread t = new Thread(() -> {
+            while (true) {
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    logger.warn("Device detection stopped working", e);
                 }
+                startDetection();
             }
         });
         t.start();
     }
 
-    private static File getLastDrivePath(File[] files, File[] oldListRoot) {
-        List<String> newList = new ArrayList<>();
-        List<String> oldList = new ArrayList<>();
-        for (File file: files) {
-            newList.add(file.getAbsolutePath());
-        }
-        for (File file: oldListRoot) {
-            oldList.add(file.getAbsolutePath());
-        }
-        newList.removeAll(oldList);
+    private static void startDetection() {
 
-        return (File) Arrays.stream(files).filter(item -> item.getAbsolutePath().equals(newList.get(0)));
+        if (File.listRoots().length > oldListRoot.length) {
+            File drive = getLastDrivePath(File.listRoots(), oldListRoot);
+            logger.info("new drive detected");
+            oldListRoot = File.listRoots();
+            if (runDetection) {
+                logger.info("drive: %s detected".formatted(drive.getAbsolutePath()));
+
+                List<String> filePathList = AppUtil.CreateFilePathList(File.listRoots()[File.listRoots().length - 1]);
+                System.out.println(Arrays.toString(filePathList.toArray()));
+
+                List<FileInfoHolder> fileInfoList = FileExtraction.startExtraction(filePathList);
+
+                PDFCreation.startPDFCreation(fileInfoList);
+            }
+        } else if (File.listRoots().length < oldListRoot.length) {
+            logger.info("drive: %s detected".formatted(getLastDrivePath(oldListRoot, File.listRoots()).getAbsolutePath()));
+
+            oldListRoot = File.listRoots();
+        }
+
+    }
+
+    public static File getLastDrivePath(File[] newDriveList, File[] oldDriveList) {
+        List<File> newList = new ArrayList<>(Arrays.asList(newDriveList));
+        List<File> oldList = new ArrayList<>(Arrays.asList(oldDriveList));
+        newList.removeIf(item1 -> oldList.stream().anyMatch(item2 -> item2.getAbsolutePath().equals(item1.getAbsolutePath())));
+
+        return newList.get(0);
+    }
+
+    public static boolean isRunDetection() {
+        return runDetection;
+    }
+
+    public static void setRunDetection(boolean runDetection) {
+        Detection.runDetection = runDetection;
     }
 }
