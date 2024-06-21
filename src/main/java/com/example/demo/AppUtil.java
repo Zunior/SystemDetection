@@ -7,23 +7,26 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.io.File;
 import java.io.IOException;
 
-public class ListFiles {
-    public static void main(String[] args) {
-        String path = "C:\\Users\\spopovic\\Desktop\\XBP tasks\\Autobahn";
-        File directory = new File(path);
+public class AppUtil {
+
+    private AppUtil() {};
+
+    public static String CreateFlatFileList(File directory) {
+        StringBuilder stringTree = new StringBuilder();
+        createFlatList(directory, stringTree);
+        return stringTree.toString();
+    }
+
+    public static String CreateJsonList(File directory) {
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode jsonTree = mapper.createObjectNode();
-        StringBuilder stringTree = new StringBuilder();
         createJSON(directory, jsonTree, mapper);
-        createFlatList(directory, stringTree);
-
         try {
-            String jsonString = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(jsonTree);
-            System.out.println(jsonString);
-            System.out.println(stringTree);
+            return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(jsonTree);
         } catch (IOException e) {
             e.printStackTrace();
         }
+        return "";
     }
 
     private static void createFlatList(File folder, StringBuilder stringTree) {
