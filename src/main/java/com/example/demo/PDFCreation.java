@@ -12,7 +12,6 @@ public class PDFCreation {
     private static final Logger logger = LogManager.getLogger(PDFCreation.class);
 
     public static void startPDFCreation(List<FileInfoHolder> fileInfoList) {
-
         for (FileInfoHolder fileInfoHolder : fileInfoList) {
             PDDocument document = new PDDocument();
 
@@ -20,7 +19,6 @@ public class PDFCreation {
             createSecondPage(document, fileInfoHolder);
             embedFile(document, fileInfoHolder);
         }
-
     }
 
     private static void embedFile(PDDocument document, FileInfoHolder fileInfoHolder) {

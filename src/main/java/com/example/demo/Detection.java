@@ -1,13 +1,16 @@
 package com.example.demo;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import javax.swing.filechooser.FileSystemView;
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.concurrent.ThreadPoolExecutor;
 
 public class Detection {
 
@@ -15,12 +18,15 @@ public class Detection {
 
     static File[] oldListRoot = File.listRoots();
     static boolean runDetection = true;
+    static int maxThreads = 5;
+    static final String destinationRootPath = "C:\\!Test";
 
     public static void main(String[] args) {
-        startDetectionThread();
+        ThreadPoolExecutor executorService = AppUtil.createThreadPoolService();
+        startDetectionThread(executorService);
     }
 
-    public static void startDetectionThread() {
+    public static void startDetectionThread(ThreadPoolExecutor executorService) {
         Thread t = new Thread(() -> {
             while (true) {
                 try {
@@ -28,13 +34,13 @@ public class Detection {
                 } catch (InterruptedException e) {
                     logger.warn("Device detection stopped working", e);
                 }
-                startDetection();
+                startDetection(executorService);
             }
         });
         t.start();
     }
 
-    private static void startDetection() {
+    private static void startDetection(ThreadPoolExecutor executor) {
 
         if (File.listRoots().length > oldListRoot.length) {
             File drive = getLastDrivePath(File.listRoots(), oldListRoot);
@@ -43,12 +49,38 @@ public class Detection {
             if (runDetection) {
                 logger.info("drive: %s detected".formatted(drive.getAbsolutePath()));
 
-                List<String> filePathList = AppUtil.CreateFilePathList(File.listRoots()[File.listRoots().length - 1]);
-                System.out.println(Arrays.toString(filePathList.toArray()));
+                if (executor.getActiveCount() >= maxThreads) {
+                    logger.info("Max threads reached");
+                    return;
+                }
+                // Create a new thread for each detection
+                executor.submit(() -> {
+                    String threadName = Thread.currentThread().getName();
 
-                List<FileInfoHolder> fileInfoList = FileExtraction.startExtraction(filePathList);
+                    // get type of inserted drive
+                    FileSystemView fsv = FileSystemView.getFileSystemView();
+                    String driveType = fsv.getSystemTypeDescription(drive);
+                    logger.info(driveType);
 
-                PDFCreation.startPDFCreation(fileInfoList);
+                    List<String> filePathList = AppUtil.CreateFilePathList(drive);
+                    if (filePathList.isEmpty()) {
+                        logger.info("No files found on drive: %s".formatted(drive.getAbsolutePath()));
+                        return;
+                    }
+//                    System.out.println(Arrays.toString(filePathList.toArray()));
+
+                    List<FileInfoHolder> fileInfoList = FileExtraction.startExtraction(filePathList, drive);
+
+                    PDFCreation.startPDFCreation(fileInfoList);
+
+                    String tmpDirectory = destinationRootPath + File.separator + threadName;
+                    try {
+                        FileUtils.deleteDirectory(new File(tmpDirectory));
+                    } catch (IOException e) {
+                        logger.error("Error deleting directory: %s".formatted(tmpDirectory), e);
+                    }
+                });
+//                executor.shutdown();
             }
         } else if (File.listRoots().length < oldListRoot.length) {
             logger.info("drive: %s detected".formatted(getLastDrivePath(oldListRoot, File.listRoots()).getAbsolutePath()));

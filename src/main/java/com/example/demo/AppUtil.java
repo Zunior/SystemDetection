@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.*;
 
 public class AppUtil {
 
@@ -40,7 +41,7 @@ public class AppUtil {
                     File directory = new File(file.getAbsolutePath());
                     createFlatList(directory, filePathList);
                 } else {
-                    filePathList.add(file.getAbsolutePath() + file.getName());
+                    filePathList.add(file.getAbsolutePath());
                 }
             }
         }
@@ -59,5 +60,15 @@ public class AppUtil {
                 }
             }
         }
+    }
+
+    public static ThreadPoolExecutor createThreadPoolService() {
+        int maxThreads = 5;
+        int minThreads = 1;
+        long keepAliveTime = 0L;
+        TimeUnit timeUnit = TimeUnit.SECONDS;
+        BlockingQueue<Runnable> workQueue = new LinkedBlockingQueue<>();
+
+        return new ThreadPoolExecutor(maxThreads, minThreads, keepAliveTime, timeUnit, workQueue);
     }
 }
