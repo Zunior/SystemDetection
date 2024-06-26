@@ -20,6 +20,7 @@ public class Detection {
     static boolean runDetection = true;
     static int maxThreads = 5;
     static final String destinationRootPath = "C:\\!Test";
+    static final long detectionInterval = 1000;
 
     public static void main(String[] args) {
         ThreadPoolExecutor executorService = AppUtil.createThreadPoolService();
@@ -30,7 +31,7 @@ public class Detection {
         Thread t = new Thread(() -> {
             while (true) {
                 try {
-                    Thread.sleep(100);
+                    Thread.sleep(detectionInterval);
                 } catch (InterruptedException e) {
                     logger.warn("Device detection stopped working", e);
                 }

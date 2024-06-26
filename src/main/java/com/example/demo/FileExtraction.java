@@ -107,8 +107,10 @@ public class FileExtraction {
             while ((bytesRead = in.read(buffer)) > 0) {
                 out.write(buffer, 0, bytesRead);
                 copiedSize.addAndGet(bytesRead);
-                double progress = (double) copiedSize.get() / totalSize.get() * 100;
-                logger.info("Progress: " + String.format("%.2f", progress));
+                if (totalSize.get() > 0) {
+                    double progress = (double) copiedSize.get() / totalSize.get() * 100;
+                    logger.info("Progress: " + String.format("%.2f", progress));
+                }
             }
         }
     }
